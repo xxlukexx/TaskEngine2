@@ -1,0 +1,11 @@
+/assets/
+/tobii/
+docs/.DS_Store
+*.md~
+*.mp4
+*.mov
+*.avi
+*.m4v
+*.wav
+*.baked.mat
+*.asv
