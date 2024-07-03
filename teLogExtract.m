@@ -30,9 +30,10 @@ function tab = teLogExtract(logArray, varargin)
         c(idx, end) = num2cell(idx);
     end
     % if logIdx is already a fieldname, rename it
-    idx = find(strcmpi('logIdx', fnames_u));
+    searchStr = 'logIdx';
+    idx = find(strncmpi(fnames_u, searchStr, length(searchStr)));
     for i = 1:length(idx)
-        fnames_u{idx} = sprintf('%s_%d', fnames_u{idx}, i);
+        fnames_u{idx(i)} = sprintf('%s_%d', fnames_u{idx(i)}, i);
     end
     % put into table
     tab = cell2table(c, 'variablenames', [fnames_u, 'logIdx']);

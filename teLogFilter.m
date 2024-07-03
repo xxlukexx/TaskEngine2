@@ -107,7 +107,13 @@ function [tab, idx] = teLogFilter(logArray, varargin)
     tvars = tab.Properties.VariableNames;
     empty = false(length(tvars), 1);
     for tv = 1:length(tvars)
+        % get the contents (rows of values) for this variable
         contents = tab.(tvars{tv});
+        % in case of matrix nested inside cell array (e.g. rows of RGB
+        % colours), unpack to a vector to avoid an error when testing for
+        % empty below
+        contents = contents(:);
+        % test for empty
         if iscell(contents(1))
             empty(tv) = all(cellfun(@isempty, contents));
         else

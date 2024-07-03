@@ -154,8 +154,8 @@ function [suc, oc, timestamps, trl, onsetLabels] = teSegment_labelTime(...
         % fieldtrip summary, use this. Otherwise we have to load the EEG
         % dataset and extract it directly from the fieldtrip struct
         hasMetadata = ~isempty(data.Metadata);
-        hasFieldtripMetadata = isprop(data.Metadata, 'fieldtrip');
-        hasSampleRate = hasField(data.Metadata.fieldtrip, 'SampleRate');
+        hasFieldtripMetadata = hasMetadata && isprop(data.Metadata, 'fieldtrip');
+        hasSampleRate = hasFieldtripMetadata && hasField(data.Metadata.fieldtrip, 'SampleRate');
         if ~needToLoadEEG && hasMetadata && hasFieldtripMetadata && hasSampleRate
             % we don't need to load the eeg data, so try to get it from the
             % metadata

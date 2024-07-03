@@ -64,13 +64,18 @@ classdef teExternalData_Fieldtrip < teExternalData
             % load
             try
                 tmp = load(obj.Paths('fieldtrip'));
+                fnames = fieldnames(tmp);
+                if length(fnames) > 1
+                    error('Multiple variables found in fieldtrip file.')
+                end
+                ft_data = tmp.(fnames{1});
             catch ERR
                 error('Error loading (%s): %s', obj.Paths('fieldtrip'),...
                     ERR.message)
             end
             
             % calculate duration
-            obj.SampleRate = tmp.ft_data.fsample;
+            obj.SampleRate = ft_data.fsample;
             
             % set valid
             obj.Valid = true;      
