@@ -1,5 +1,5 @@
 function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
-    data, onsetLabel, offsetLabel, dur_baseline, varargin)
+    data, onsetLabel, offsetLabel, varargin)
 % Segments data into trials using pairs of labels to define trial
 % on/offsets. 
 
@@ -25,6 +25,19 @@ function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
         error('Must pass an offset label (char) or labels (cellstr) as the third input argument.')
     end    
     
+% parse optional
+
+    parser      =   inputParser;
+    addParameter(   parser, 'fieldtrip',               [],         @(x) isempty(x) || isstruct(x)       )
+    addParameter(   parser, 'task',                    [],         @ischar                              )
+    addParameter(   parser, 'dur_baseline',            0,          @isnumeric                           )
+    parse(          parser, varargin{:});
+    data_ft     =   parser.Results.fieldtrip;
+    task_filter =   parser.Results.task; 
+    dur_baseline =  parser.Results.dur_baseline;
+    
+% validate baseline duration (if specified)
+
     if exist('dur_baseline', 'var') && ~isempty(dur_baseline)
         if ~isnumeric(dur_baseline) || ~isscalar(dur_baseline)
             error('Baseline duration must be a numeric scalar.')
@@ -38,18 +51,23 @@ function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
     else
         % baseline duration of 0 means no baseline
         dur_baseline = 0;
-    end
-    
-% parse optional
-
-    parser      =   inputParser;
-    addParameter(   parser, 'fieldtrip',               [],         @(x) isempty(x) || isstruct(x)       )
-    parse(          parser, varargin{:});
-    data_ft     =   parser.Results.fieldtrip;
+    end    
     
 % get events from log
 
     events = data.Log.Events;
+    
+% (optionally) filter events for a particular task
+
+    if ~isempty(task_filter)
+        idx_task_filter = strcmpi(events.task, task_filter);
+        if ~any(idx_task_filter)
+            oc = sprintf('no events remain after filtering for task [%s]',...
+                task_filter);
+            return
+        end
+        events = events(idx_task_filter, :);
+    end
     
 % % can only (currently) work on string event labels. Find any non-string
 % % events, warn, then ignore them. 

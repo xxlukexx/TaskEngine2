@@ -35,6 +35,8 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     addParameter(   parser, 'triallabels',          []                          )
     addParameter(   parser, 'includetrialerrors',   false,      @islogical      )
     addParameter(   parser, 'musthave',             {},         @(x) ischar(x) || islogical(x))
+    addParameter(   parser, 'cachedlog',            [],         @(x) isa(x, 'teLog'))
+    
     parse(          parser, varargin{:});
     eegSync     =   parser.Results.eegsync;
     trl         =   parser.Results.trl;
@@ -42,6 +44,7 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     lab_trial   =   parser.Results.triallabels;
     incTrialErr =   parser.Results.includetrialerrors;
     mustHave    =   parser.Results.musthave;
+    cached_log  =   parser.Results.cachedlog;
     
     if isempty(timestamps)
         error('Timestamps cannot be empty.')
@@ -54,8 +57,12 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
         error('The ''mustHave'' parameter must be either char or cell array, and must be either ''log'', ''eyetracking'', or ''fieldtrip''')
     end
     
-    if ~isequal(size(timestamps, 1), length(lab_trial))
+    if ~isempty(lab_trial) && ~isequal(size(timestamps, 1), length(lab_trial))
         error('The height of the timestamps matrix must be the same length as the trial labels.')
+    end
+    
+    if isempty(cached_log)
+        cached_log = data.Log;
     end
     
 % set up output vars
@@ -68,7 +75,8 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     hasFieldtrip        = false(numTrials, 1);
     suc_et              = false(numTrials, 1);
     oc_et               = cell(numTrials, 1);
-    lg                  = data.Log;
+    lg                  = cached_log;
+    log_t               = lg.LogTable.timestamp;
     
 % determine presence of external data
 
@@ -104,7 +112,7 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
         
         % cut log
         [trials{t}, suc_log(t), oc_log{t}] =...
-            cutLog(lg, timestamps(t, 1), timestamps(t, 2), incTrialErr);
+            cutLog(lg, timestamps(t, 1), timestamps(t, 2), incTrialErr, log_t);
         if ~suc_log(t)
             continue
         end
@@ -144,10 +152,6 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
             [data_ft_seg, suc_ft, oc_ft] = cutFieldtrip(ft,...
                 timestamps(:, 1), timestamps(:, 2), eegSync, trl,...
                 eegBaseline, trialGUIDs);
-            
-%             % repeat suc_ft and oc_ft for all trials
-%             suc_ft(2:numTrials, 1) = repmat(suc_ft(1), numTrials - 1, 1);
-%             oc_ft(2:numTrials, 1) = repmat(oc_ft(1), numTrials - 1, 1);
             
         else
             
@@ -196,28 +200,42 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
         suc = true;
         if ismember('log', mustHave)
             suc = suc && any(suc_log);
-            oc = 'Missing log data (and maybe others) specified as must haves';
+            if ~suc_log
+                oc = 'Missing log data (and maybe others) specified as must haves';
+            end
         end
         if ismember('eyetracking', mustHave)
             suc = suc && any(suc_et);
-            oc = 'Missing eye tracking data (and maybe others) specified as must haves';
+            if ~suc_et
+                oc = 'Missing eye tracking data (and maybe others) specified as must haves';
+            end
         end
         if ismember('fieldtrip', mustHave)
             suc = suc && any(suc_ft);
-            oc = 'Missing fieldtrip data (and maybe others) specified as must haves';
+            if ~suc_ft
+                oc = 'Missing fieldtrip data (and maybe others) specified as must haves';
+            end
         end
     end
 
+    if suc
+        oc = 'success';
+    end
+    
 end
 
-function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr)
+function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr, log_t)
 
     suc = false;
     oc = 'unknown error';
     trial = [];
     
+%     % sort the log
+%     la = teSortLog(lg.LogArray);
+%     lg = teLog(la);
+    
     % find the first event that occurs at or after the onset timestamp
-    s1 = find(lg.LogTable.timestamp >= onset, 1, 'first');
+    s1 = find(log_t >= onset, 1, 'first');
     if isempty(s1)
         suc = false;
         oc = 'onset not found in log';
@@ -225,7 +243,7 @@ function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr)
     end
     
     % find the first event that occurs after the offset timestamp
-    s2 = find(lg.LogTable.timestamp > offset, 1);
+    s2 = find(log_t > offset, 1);
     if isempty(s2)
         suc = false;
         oc = 'offset not found in log';
@@ -287,6 +305,23 @@ function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr)
             isequal(lg_seg.LogTable.trialguid{:})
         trial.TrialGUID = lg_seg.LogTable.trialguid{1};
     end
+    
+    % if the log has a task variable, and all log entries within this
+    % segment (trial) are equal, store that task name in the teTrial
+    % instance
+    if ismember('task', lg_seg.LogTable.Properties.VariableNames)
+        
+        % remove empty task names
+        var_tasks = lg_seg.LogTable.task;
+        idx_empty_task = cellfun(@isempty, var_tasks);
+        var_tasks(idx_empty_task) = [];
+        
+        % are all tasks equal?
+        if length(var_tasks) == 1 || length(var_tasks) > 1 && isequal(var_tasks{:})
+            trial.Task = var_tasks{1};
+        end
+        
+    end    
 
     suc = true;
     oc = '';

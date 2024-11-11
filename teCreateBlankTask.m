@@ -1,24 +1,24 @@
-function [obj, path_task, path_stim] = teCreateBlankTask(path_folder, name)
+function [obj, path_task, path_stim] = teCreateBlankTask(path_task_folder, tsak_name)
 
     if nargin ~= 2
         error('Call this function with two input arguments, 1) path to task folder, 2) name of task')
     end
     
-    if ~ischar(path_folder)
+    if ~ischar(path_task_folder)
         error('Task path must be a string.')
     end
     
-    if ~exist(path_folder, 'dir')
+    if ~exist(path_task_folder, 'dir')
         error('Task path not found.')
     end
     
-    if ~ischar(name)
+    if ~ischar(tsak_name)
         error('Name must be a string.')
     end
     
     % build path to task
     
-        path_task = fullfile(path_folder, name);
+        path_task = fullfile(path_task_folder, tsak_name);
         if exist(path_task, 'dir')
 
             % path exists, confirm overwrite 
@@ -47,17 +47,17 @@ function [obj, path_task, path_stim] = teCreateBlankTask(path_folder, name)
         
         % task version 
         def.strTrialVer = strrep(def.strTrialVer, '#taskname#',...
-            sprintf('%s', name));
+            sprintf('%s', tsak_name));
         def.strTrialVer = strrep(def.strTrialVer, '#date#',...
             datestr(now, 'yyyymmdd'));
         def.strTrialVer = strrep(def.strTrialVer, '#version#', '1');
         
         % trial function
-        def.strTrialFun = strrep(def.strTrialFun, '#name#', name);
+        def.strTrialFun = strrep(def.strTrialFun, '#name#', tsak_name);
         
         % build output paths
-        file_ver = fullfile(path_task, sprintf('%s_ver.m', name));
-        file_trialFun = fullfile(path_task, sprintf('%s_trial.m', name));
+        file_ver = fullfile(path_task, sprintf('%s_ver.m', tsak_name));
+        file_trialFun = fullfile(path_task, sprintf('%s_trial.m', tsak_name));
         
     % write output files
     

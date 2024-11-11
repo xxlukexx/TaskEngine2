@@ -5,13 +5,13 @@ classdef teTrial < teDynamicProps
         Gaze
         TrialNo = nan
         TrialGUID
+        Task
     end
     
     properties (SetAccess = private)
         Date
         Onset
         Offset
-        Task
         Log teLog
     end
     

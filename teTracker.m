@@ -459,6 +459,7 @@ classdef teTracker < dynamicprops
                 msg = obj.prVariables{p, 6};
                 if ~isempty(msg)
                     teEcho(msg);
+                    fprintf('\n');
                 end
                 
                 % not happy until this variable has been validated
@@ -477,7 +478,7 @@ classdef teTracker < dynamicprops
                         obj.(pnames{p}) = val;
                     catch ERR
                         happy = false;
-                        fprintf(2, '%s', ERR.message)
+                        fprintf(2, '%s\n', ERR.message)
                     end
                     
                 end

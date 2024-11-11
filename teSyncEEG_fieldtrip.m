@@ -13,10 +13,12 @@ function [sync, tracker] = teSyncEEG_fieldtrip(tracker, data_ft, varargin)
     addParameter(   parser, 'tracker',              [],         @(x) isa(x, 'teTracker'))
     addParameter(   parser, 'rebuildmetadata',      false,      @islogical)
     addParameter(   parser, 'ignorescreenrecording',false,      @islogical)
+    addParameter(   parser, 'fromlightsensor',      false,      @islogical)
     
-    parse(          parser, varargin{:});
-    tolerance   =   parser.Results.tolerance;
-    syncMarker  =   parser.Results.syncmarker;
+    parse(                  parser, varargin{:});
+    tolerance           =   parser.Results.tolerance;
+    syncMarker          =   parser.Results.syncmarker;
+    fromLightSensor     =   parser.Results.fromlightsensor;
     
 % setup
     
@@ -56,8 +58,13 @@ function [sync, tracker] = teSyncEEG_fieldtrip(tracker, data_ft, varargin)
     
 % extract EEG event data
 
+    % if we are recreating from a light sensor, we don't have the value of
+    % each event (just the latency) so can't use registered events
+    only_reg_events = ~fromLightSensor;
+    
+    % get the events from the fieldtrip data
     [codes_eeg, samps_eeg, lab_eeg, time_eeg, numEEG] =...
-        extractEEGEvents(tracker, data_ft, ft_events);
+        extractEEGEvents(tracker, data_ft, ft_events, only_reg_events);
     
 % extract te event data
 
@@ -232,7 +239,14 @@ function [sync, tracker] = teSyncEEG_fieldtrip(tracker, data_ft, varargin)
 end
 
 function [codes_eeg, samps_eeg, lab_eeg, time_eeg, numEEG] =...
-    extractEEGEvents(tracker, data_ft, ft_events)
+    extractEEGEvents(tracker, data_ft, ft_events, only_reg_events)
+
+    % by default we only try to synchronise with registered events from
+    % task engine. In some cases (e.g. when reconstructing from light
+    % sensor) we don't want this. 
+    if ~exist('only_reg_events', 'var') || isempty(only_reg_events)
+        only_reg_events = true;
+    end
 
     % get codes and sample indices from fieldtrip data
     codes_eeg = [ft_events.value]';
@@ -249,20 +263,28 @@ function [codes_eeg, samps_eeg, lab_eeg, time_eeg, numEEG] =...
         warning('No .abstime in ft_data, creating sham values from sample indices/sampling rate.')
     end
 
-    % convert eeg codes to labels
-    lab_eeg = teCodes2RegisteredEvents(tracker.RegisteredEvents,...
-        codes_eeg, 'eeg');
-    
-    % remove any EEG codes that don't have corresponding registered events
-    idx_noRegEvent = cellfun(@isempty, lab_eeg);
-    if any(idx_noRegEvent)
-        codes_eeg(idx_noRegEvent) = [];
-        samps_eeg(idx_noRegEvent) = [];
-        lab_eeg(idx_noRegEvent) = [];
-        time_eeg(idx_noRegEvent) = [];
-        numEEG = length(codes_eeg);
-        warning('%d EEG event(s) did not have corresponding Task Engine registered events and will be ignored.',...
-            sum(idx_noRegEvent));
+    if only_reg_events
+        
+        % convert eeg codes to labels
+        lab_eeg = teCodes2RegisteredEvents(tracker.RegisteredEvents,...
+            codes_eeg, 'eeg');
+
+        % remove any EEG codes that don't have corresponding registered events
+        idx_noRegEvent = cellfun(@isempty, lab_eeg);
+        if any(idx_noRegEvent)
+            codes_eeg(idx_noRegEvent) = [];
+            samps_eeg(idx_noRegEvent) = [];
+            lab_eeg(idx_noRegEvent) = [];
+            time_eeg(idx_noRegEvent) = [];
+            numEEG = length(codes_eeg);
+            warning('%d EEG event(s) did not have corresponding Task Engine registered events and will be ignored.',...
+                sum(idx_noRegEvent));
+        end
+        
+    else
+        
+        lab_eeg = [];
+        
     end
     
 end
@@ -482,8 +504,12 @@ function [tab, numMatched, meanErr, mdl, sync_r2, idx_log] =...
         % event; we need to know which is the correct one to match
 
             % the EEG event label and the te log item event label must
-            % match
-            match = cellfun(@(x) isequal(lab_eeg{e}, x), event_te);
+            % match. If the labels are missing then we ignore this step
+            if ~isempty(lab_eeg)
+                match = cellfun(@(x) isequal(lab_eeg{e}, x), event_te);
+            else
+                match = false(size(event_te));
+            end
 
             % calculate timing error between this EEG event and all
             % candidate te events. In the event of any ties (e.g.

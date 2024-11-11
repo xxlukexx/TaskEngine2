@@ -4923,24 +4923,38 @@ classdef tePresenter < handle
 %                 return
 %             end
             
-            % query keyboard queue, store resulst and timestamps in private
-            % variables
-            [obj.prKB_pressed, obj.prKB_firstPress,...
-                obj.prKB_firstRelease, obj.prKB_lastPress,...
-                obj.prKB_lastRelease] = KbQueueCheck(obj.prActiveKeyboard);
-            % set keyboard empty flag to false
-            obj.prKB_empty = false;
-            
-            if obj.FullDebugOutput
-                if obj.prKB_pressed
-                    keyNames = KbName(obj.prKB_lastPress);
-                    if ~iscell(keyNames)
-                        keyNames = {keyNames};
+                % query keyboard queue, store resulst and timestamps in private
+                % variables
+                [obj.prKB_pressed, obj.prKB_firstPress,...
+                    obj.prKB_firstRelease, obj.prKB_lastPress,...
+                    obj.prKB_lastRelease] = KbQueueCheck(obj.prActiveKeyboard);
+                % set keyboard empty flag to false
+                obj.prKB_empty = false;
+
+                if obj.FullDebugOutput
+                    if obj.prKB_pressed
+                        keyNames_current = KbName(obj.prKB_pressed);
+                        keyNames_old = KbName(obj.prKB_lastPress);
+                        % put previous key names into cell if not already
+                        % in one
+                        if ~iscell(keyNames_old)
+                            keyNames_old = {keyNames_old};
+                        end
+                        if ~iscell(keyNames_current)
+                            keyNames_current = {keyNames_current};
+                        end
+                        % display current key
+                        if ~isempty(keyNames_current)
+                            teEcho('[tePresenter.KeyUpdate]: Key pressed\n');
+                            teEcho('\t%s\n', keyNames_current{:});
+                        end
+                        % display last key pressed
+                        if ~isempty(keyNames_old)
+                            teEcho('[tePresenter.KeyUpdate]: Previous key pressed\n');
+                            teEcho('\t%s\n', keyNames_old{:});                    
+                        end
                     end
-                    teEcho('[tePresenter.KeyUpdate]: Key pressed\n');
-                    teEcho('\t%s\n', keyNames{:});
-                end
-            end     
+                end     
             
         % check for special keys, and process accordingly...
         

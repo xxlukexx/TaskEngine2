@@ -58,13 +58,18 @@ function data = teTrials2ECKData(varargin)
     numTrials = length(trials);
     tmp_log = cell(numTrials, 1);
     data.Segments(1).JobLabel = [trials{1}.Task, '_trial'];
+    data.Segments(1).Task = [trials{1}.Task, '_trial'];    
     for t = 1:numTrials
         [mb, tb, eb] = trials{t}.Gaze.ExportTobiiAnalytics;
         data.Segments(1).Segment(t).MainBuffer = mb;
         data.Segments(1).Segment(t).TimeBuffer = tb;
         data.Segments(1).Segment(t).EventBuffer = eb;
-        data.Segments(1).Segment(t).Label = trials{t}.OnsetLabel;
-        data.Segments(1).Segment(t).AddData = trials{t}.OnsetLabel;        
+        if isfield(data.Segments(1).Segment(t), 'Label')
+            data.Segments(1).Segment(t).Label = trials{t}.OnsetLabel;
+        end
+        if isfield(data.Segments(1).Segment(t), 'AddData')
+            data.Segments(1).Segment(t).AddData = trials{t}.OnsetLabel;        
+        end
         tmp_log{t} = teLogFilter(trials{t}.Log.LogArray, 'topic', 'trial_log_data');
     end
     

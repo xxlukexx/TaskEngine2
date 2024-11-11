@@ -11,6 +11,7 @@ classdef teExternalData_Enobio < teExternalData
         SampleRate
         Duration      
         Valid = false
+        RawData = []
     end
     
     properties (SetAccess = private)
@@ -126,6 +127,22 @@ classdef teExternalData_Enobio < teExternalData
             obj.Valid = true;
             obj.InstantiateSuccess = true; 
             obj.InstantiateOutcome = '';
+            
+        end
+        
+        function [ft, events, t] = ToFieldtrip(obj)
+            
+            [ft, events, t] = eegEnobio2Fieldtrip(obj.Paths('enobio_easy'));
+            
+        end
+        
+        function Load(obj)
+          
+            if ~obj.Valid
+                error('Cannot load when object is not in a valid state.')
+            end
+            
+            obj.RawData = load();
             
         end
        

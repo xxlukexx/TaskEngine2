@@ -21,6 +21,14 @@ function codes = teRegisteredEvents2Codes(regEvents, labels, type)
     % get master list of eeg codes 
     masterLabels = smry{:, 1};
     
+    % remove non-text labels
+    idx_non_text = ~cellfun(@ischar, labels);
+    labels(idx_non_text) = repmat({'<NON_TEXT_LABEL>'}, sum(idx_non_text), 1);
+    if any(idx_non_text)
+        warning('[teRegisteredEvents2Codes]: %d non-text labels found and ignored',...
+            sum(idx_non_text))
+    end
+    
     % get indices of each event label in the master list of events
     idx = cellfun(@(x) find(strcmpi(masterLabels, x), 1), labels,...
         'UniformOutput', false);

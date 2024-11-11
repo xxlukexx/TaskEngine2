@@ -48,7 +48,7 @@ function [is, reason, file_tracker, tracker] =...
     file_tracker = teFindFile(path_session, '*tracker*.mat');
     if isempty(file_tracker)
         is = false;
-        reason = 'file not found';
+        reason = 'tracker file not found';
         return
     elseif iscell(file_tracker) && length(file_tracker) > 1
         is = false;
