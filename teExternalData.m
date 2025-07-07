@@ -15,9 +15,11 @@ classdef teExternalData < handle
         Te2Ext
     end
         
-    properties (Abstract, SetAccess = private)
+    properties (Abstract, SetAccess = protected)
         Type
         Valid
+        T1
+        T2
     end
     
     properties (Constant)

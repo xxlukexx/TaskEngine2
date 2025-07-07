@@ -106,13 +106,33 @@ function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
         
         e = e + 1;
         
+        % we need to handle both basic text events, e.g.
+        %
+        %       'FLEETINGFILMS_FIX2_ONSET'
+        % 
+        % ...and also cell arrays of values that may contain a text event,
+        % e.g. 
+        %
+        %     1×2 cell array
+        %
+        %       {'IMAGE_ONSET'}    {'ff_FaceInstructions2.png'}
+        %
+        % To do this, we'll put everything into a cell array. This means
+        % that basic text events get put into a cell array of size (1, 1),
+        % to support looping through this array regardless of event type
+        
+        this_event = ev{e};
+        if ~iscell(this_event)
+            this_event = {this_event};
+        end
+        
         switch lookingFor
             case 'onset'
                 
                 if onsetHasWildcard
-                    onsetFound = lm_strcmpWildcard(ev{e}, [], mask_onset);
+                    onsetFound = teSegment_compare_with_wildcard(this_event, mask_onset);
                 else
-                    onsetFound = strcmp(ev{e}, onsetLabel);
+                    onsetFound = teSegment_compare_labels(this_event, onsetLabel);
                 end
                 if onsetFound
                     idx_onsets(idx) = e;
@@ -122,9 +142,9 @@ function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
             case 'offset'
                 
                 if offsetHasWildcard
-                    offsetFound = lm_strcmpWildcard(ev{e}, [], mask_offset);
+                    offsetFound = teSegment_compare_with_wildcard(this_event, mask_offset);
                 else
-                    offsetFound = strcmp(ev{e}, offsetLabel);
+                    offsetFound = teSegment_compare_labels(this_event, offsetLabel);
                 end
                 if offsetFound
                     idx_offsets(idx) = e;
@@ -240,5 +260,57 @@ function [suc, oc, timestamps, smry, trl] = teSegment_labelPairs(...
     
     suc = true;
     oc = '';
+
+end
+
+function found = teSegment_compare_with_wildcard(event, mask)
+    
+    % get number of sub events in the cell array (hint: will be 1 for basic
+    % text events)
+    num_sub_events = length(event);
+    
+    % per-sub-event storage indicating whether the mask was found in the
+    % sub event
+    sub_found = false(num_sub_events, 1);
+    
+    % loop through sub events and compare the wildcard mask to the event
+    for se = 1:num_sub_events
+        
+        this_sub_event = event{se};
+        if ischar(this_sub_event)
+            sub_found(se) = lm_strcmpWildcard(this_sub_event, [], mask);
+        end
+        
+    end
+    
+    % if any of the sub events match the mask, then we found the event we
+    % were looking for
+    found = any(sub_found);
+
+end
+
+function found = teSegment_compare_labels(event, label)
+
+    % get number of sub events in the cell array (hint: will be 1 for basic
+    % text events)
+    num_sub_events = length(event);
+    
+    % per-sub-event storage indicating whether the mask was found in the
+    % sub event
+    sub_found = false(num_sub_events, 1);
+    
+    % loop through sub events and compare the label to the event
+    for se = 1:num_sub_events
+        
+        this_sub_event = event{se};
+        if ischar(this_sub_event)
+            sub_found(se) = strcmp(this_sub_event, label);
+        end
+        
+    end
+    
+    % if any of the sub events match the label, then we found the event we
+    % were looking for
+    found = any(sub_found);
 
 end

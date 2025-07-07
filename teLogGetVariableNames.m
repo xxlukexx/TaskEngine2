@@ -12,12 +12,6 @@ function [names, tabVarNames, sig, sig_u, sig_i, sig_s, logArray] =...
     % get names of all  vars
     names = cellfun(@fieldnames, logArray, 'uniform', false);
     
-%     % add numeric index to each name, for later sorting
-%     nameIdx = cell(size(names));
-%     for n = 1:length(names)
-%         nameIdx{n} = 1:length(names{n});
-%     end
-    
     % make signature of each unique combination of data fields
     makeSignatures
     
@@ -73,21 +67,6 @@ function [names, tabVarNames, sig, sig_u, sig_i, sig_s, logArray] =...
         [chVarLen, so] = sort(chVarLen, 'descend');
         chVarNames = chVarNames(so);
         
-%         tmp = cell(sum(chVarLen), 1);
-%         s1 = 1;
-%         s2 = chVarLen(1);
-%         tmp(s1:s2) = chVarNames{1};
-%         for v = 2:length(chVarNames)
-%             idx_rem = ismember(chVarNames{v}, tmp(1:s2));
-%             chVarNames{v}(idx_rem) = [];
-%             s1 = s2 + 1;
-%             s2 = s2 + length(chVarNames{v});
-%         end
-%         
-%         % for each chunk, make a vector indicating a sort order to restore
-%         % the current order once the values have been alphabetised
-%         [chVarNames_c, ~, chVarNames_s] = cellfun(@unique, chVarNames, 'uniform', false);
-        
         % place all var names next to each other in a vector. There will be
         % many repeats
         tabVarNames = horzcat(chVarNames{:});
@@ -96,43 +75,6 @@ function [names, tabVarNames, sig, sig_u, sig_i, sig_s, logArray] =...
         [~, tvn_i, tvn_s] = unique(tabVarNames);
         tabVarNames = tabVarNames(tvn_i);
         
-        
-% %         [
-%         
-% 
-%         % get number of unique names for each log item
-%         lens = cellfun(@length, chVarNames);
-%         
-%         % find the longest set of unique names
-%         idx_longest = lens == max(lens);
-%         uOrder = chVarNames{idx_longest};
-%         
-% %         % get sort order of longest unique names
-% %         [~, so] = sort(uOrder);
-%         
-%         % get unique names across entire log array
-%         [ch_u, ch_i, ch_s] = unique(horzcat(chVarNames{:}));
-% 
-%         tmp = cell(size(chVarNames));
-%         maxPos = max(lens) + 1;
-%         for un = 1:length(chVarNames)
-%             idx = find(strcmpi(chVarNames{un}, uOrder));
-%             if isempty(idx)
-%                 idx = maxPos;
-%                 maxPos = maxPos +  1;
-%             end
-%             tmp{idx} = chVarNames{un};
-%         end
-%         idx_empty = cellfun(@isempty, tmp);
-% %         tmp(idx_empty) = [];
-%         chVarNames = tmp;
-%         
-%         % generic vars are always first in the order
-%         genVars = {'date', 'timestamp', 'source', 'topic'};
-%         if any(ismember(genVars, chVarNames))
-%             genVarIdx = cellfun(@(x) find(strcmpi(x, chVarNames)), genVars);
-%             chVarNames = [chVarNames(genVarIdx), setdiff(chVarNames, genVars)];
-%         end
     
     function makeSignatures
         sig = cellfun(@(x) horzcat(x{:}), names, 'uniform', false);

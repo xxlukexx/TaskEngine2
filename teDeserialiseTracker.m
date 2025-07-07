@@ -1,4 +1,4 @@
-function [suc, oc] = teDeserialiseTracker(path_ses)
+function [suc, oc, tracker] = teDeserialiseTracker(path_ses)
 
     suc = false;
     oc = 'unknown error';
@@ -23,7 +23,21 @@ function [suc, oc] = teDeserialiseTracker(path_ses)
     
     % deserialise
     tracker = getArrayFromByteStream(tracker);
+    
+    if ~isa(tracker, 'teTracker')
+        oc = sprintf('Deserialised object was not teTracker but %s',...
+            class(tracker));
+        return
+    end
         
+    % backup
+    path_zip = strrep(path_tracker, '.mat', '_serialised.zip');
+    zip(path_zip, path_tracker);
+    if ~exist(path_zip, 'file')
+        oc = sprintf('Failed to verify backup file: %s', path_zip);
+        return
+    end
+    
     % save
     save(path_tracker, 'tracker')
     

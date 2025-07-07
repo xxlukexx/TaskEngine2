@@ -6,19 +6,21 @@ classdef teExternalData_EyeTracking < teExternalData
         Te2Ext = @(x) x
     end
     
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         TargetSampleRate
         Notepad
         TrackerType
         Calibration
     end
     
-    properties (Dependent, SetAccess = private)
+    properties (Dependent, SetAccess = protected)
         Duration
         Valid     
+        T1
+        T2
     end
     
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         Type = 'eyetracking'
     end
     
@@ -100,6 +102,14 @@ classdef teExternalData_EyeTracking < teExternalData
         
         function val = get.Valid(obj)
             val = ~isempty(obj.Buffer);
+        end
+        
+        function val = get.T1(obj)
+            val = obj.Buffer(1, 1);
+        end
+        
+        function val = get.T2(obj)
+            val = obj.Buffer(end, 1);
         end
         
     end

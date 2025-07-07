@@ -77,9 +77,18 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
                 % create a teExternalData instance of the appropriate
                 % sub-type for the type of external data (e.g.
                 % teExternalData_Enobio)
-                ext(type) = feval(className, path_ext);
-                suc = ext(type).InstantiateSuccess;
-                oc = ext(type).InstantiateOutcome;
+                ext_tmp = feval(className, path_ext);
+                
+                % this may fail 
+                if isempty(ext_tmp)
+                    suc = false;
+                    oc = sprintf('required files missing [type:%s, className: %s]',... 
+                    type, className);
+                else
+                    ext(type) = ext_tmp;
+                    suc = ext(type).InstantiateSuccess;
+                    oc = ext(type).InstantiateOutcome;
+                end
                 
                 % if teExternalData subclass did not instantiate correctly,
                 % report this in the metadata

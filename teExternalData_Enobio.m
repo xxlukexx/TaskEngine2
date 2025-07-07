@@ -1,20 +1,25 @@
-classdef teExternalData_Enobio < teExternalData
+classdef teExternalData_Enobio < teExternalData_EEG
 
-    properties 
-        Ext2Te = @(x) x
-        Te2Ext = @(x) x
-    end
+%     properties 
+%         Ext2Te = @(x) x
+%         Te2Ext = @(x) x
+%     end
     
-    properties (SetAccess = private)
-        NumChannels
-        NumSamples
-        SampleRate
-        Duration      
-        Valid = false
+    properties (SetAccess = protected)
+%         NumChannels
+%         NumSamples
+%         SampleRate
+%         Duration      
+%         Valid = false
         RawData = []
+%         T1 = nan
+%         T2 = nan
+        EEGSystem = 'enobio';
+%         Fieldtrip
+%         NumEvents
     end
     
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         Type = 'enobio'        
     end
     
@@ -23,7 +28,7 @@ classdef teExternalData_Enobio < teExternalData
         function obj = teExternalData_Enobio(path_easy, path_info)
             
             % call superclass constructor to do common initiation
-            obj = obj@teExternalData;
+            obj = obj@teExternalData_EEG;
             
             % default to failure 
             obj.InstantiateSuccess = false;
@@ -111,8 +116,7 @@ classdef teExternalData_Enobio < teExternalData
                 error('Info file not found: %s', obj.Paths('enobio_info'))
             end
             try
-                [obj.NumChannels, obj.SampleRate, ~, numSamples] =...
-                    NE_ReadInfoFile(obj.Paths('enobio_info'), 0); 
+                hdr = eegEnobioReaderHeaderFile(obj.Paths('enobio_info'));
             catch ERR_loadHeader
                 obj.InstantiateOutcome = sprintf('Error loading header:\n\n%s',...
                     ERR_loadHeader.message);
@@ -120,8 +124,16 @@ classdef teExternalData_Enobio < teExternalData
             end
             
             % calculate duration
+            numSamples = hdr.Number_of_records_of_EEG;
+            obj.SampleRate = extractNumeric(hdr.EEG_sampling_rate);
             obj.Duration = numSamples / obj.SampleRate;
             obj.NumSamples = numSamples;
+            obj.T1 = hdr.StartDate__firstEEGtimestamp_ / 1e3;
+            obj.T2 = obj.T1 + obj.Duration;
+            
+            % load raw data and events
+            [obj.Fieldtrip, obj.Events] = obj.ToFieldtrip;
+%             obj.NumEvents = length(obj.Events);
             
             % set valid
             obj.Valid = true;

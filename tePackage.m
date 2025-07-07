@@ -21,23 +21,28 @@ function tePackage(varargin)
     parser = inputParser;
     parser.addRequired('path_battery', @(x) ischar(x) && exist(x, 'dir'));
     parser.addRequired('path_pack', @ischar);
+    parser.addParameter('battery', [], @ischar);
     parser.addParameter('extra_folder', [], @(x) iscell(x) || (ischar(x) && exist(x, 'dir')));
     parser.addParameter('tobii_sdk_version', [], @(x) ischar(x) && exist(x, 'dir'));
     parser.parse(varargin{:})
     path_battery = parser.Results.path_battery;
+    battery = parser.Results.battery;
     path_pack = parser.Results.path_pack;
     path_extra = parser.Results.extra_folder;
     tobii_sdk_version = parser.Results.tobii_sdk_version;
 
     path_master = '/Users/luke/code/Dev/stim/_master';
+    path_lm_tools = '/Users/luke/code/Dev/lm_tools';
 
     if ~exist(path_battery, 'dir') 
         error('Could not find battery path at %s', path_battery);
     end
 
     % extract battery name
-    parts = strsplit(path_battery, filesep);
-    battery = parts{end};
+    if isempty(battery)
+        parts = strsplit(path_battery, filesep);
+        battery = parts{end};
+    end
     
     % find tasks
     path_reg = fullfile(path_battery, sprintf('%s.reg.mat', battery));
@@ -84,7 +89,8 @@ function tePackage(varargin)
 
     % lm_tools
     
-        path_lmtools_src = fullfile(path_master, 'lm_tools');
+        path_lmtools_src = path_lm_tools;
+%         path_lmtools_src = fullfile(path_master, 'lm_tools');
         if ~exist(path_lmtools_src, 'dir') 
             error('Could not find lm_tools path at %s', path_lmtools_src);
         end

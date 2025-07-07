@@ -1,16 +1,21 @@
-classdef teExternalData_Fieldtrip < teExternalData
+classdef teExternalData_Fieldtrip < teExternalData_EEG
     
-    properties 
-        Ext2Te = @(x) x
-        Te2Ext = @(x) x
+%     properties 
+%         Ext2Te = @(x) x
+%         Te2Ext = @(x) x
+%     end
+    
+    properties (SetAccess = protected)
+%         Fieldtrip
+%         Events
+%         SampleRate
+%         Valid 
+%         T1
+%         T2
+        EEGSystem = 'unknown_fieldtrip';
     end
     
-    properties (SetAccess = private)
-        SampleRate
-        Valid 
-    end
-    
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         Type = 'fieldtrip'        
     end
     
@@ -19,7 +24,7 @@ classdef teExternalData_Fieldtrip < teExternalData
         function obj = teExternalData_Fieldtrip(path_ft)
             
             % call superclass constructor to do common initiation
-            obj = obj@teExternalData;
+            obj = obj@teExternalData_EEG;
             
             % check input args, to ensure that a path has been passed, and
             % that the path exists
@@ -32,7 +37,7 @@ classdef teExternalData_Fieldtrip < teExternalData
             % if a folder was passed, try to find the fieldtrip data in it
                 
                 % look for fieldtrip file
-                file_ft = teFindFile(path_ft, '*fieldtrip*.mat');
+                file_ft = teFindFile(path_ft, '*.mat');
                 if isempty(file_ft)
                     warning('Fieldtrip file not found in fieldtrip folder.')
                     return
@@ -65,17 +70,40 @@ classdef teExternalData_Fieldtrip < teExternalData
             try
                 tmp = load(obj.Paths('fieldtrip'));
                 fnames = fieldnames(tmp);
-                if length(fnames) > 1
+                
+                % data can be 1) a single fieldtrip struct inside the file,
+                % or 2) a struct holding .data and .events fields
+                if all(ismember({'data', 'events'}, fnames))
+                    ft_data = tmp.data;
+                    events = tmp.events;
+                elseif length(fnames) > 1
                     error('Multiple variables found in fieldtrip file.')
+                elseif length(fnames) == 1
+                    ft_data = tmp.(fnames{1});
+                    if isfield(ft_data, 'events')
+                        events = ft_data.events;
+                    else
+                        events = [];
+                    end
                 end
-                ft_data = tmp.(fnames{1});
             catch ERR
                 error('Error loading (%s): %s', obj.Paths('fieldtrip'),...
                     ERR.message)
             end
             
+            obj.Fieldtrip = ft_data;
+            obj.Events = events;
+            
             % calculate duration
             obj.SampleRate = ft_data.fsample;
+            
+            if isfield(ft_data, 'abstime')
+                obj.T1 = ft_data.abstime(1);
+                obj.T2 = ft_data.abstime(2);
+            else
+                obj.T1 = ft_data.time{1}(1);
+                obj.T2 = ft_data.time{1}(end);
+            end
             
             % set valid
             obj.Valid = true;      
@@ -84,6 +112,20 @@ classdef teExternalData_Fieldtrip < teExternalData
             obj.InstantiateOutcome = '';
                 
         end
+        
+        function [ft, events, t] = ToFieldtrip(obj)
+            
+            ft = obj.Fieldtrip;
+            if isfield(ft, 'events')
+                events = ft.events;
+            end
+            if isfield(ft, 'abstime')
+                t = ft.abstime;
+            else
+                t = [];
+            end
+            
+        end        
         
         function data = Load(obj)
             

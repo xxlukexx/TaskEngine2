@@ -66,9 +66,21 @@ function [sync, tracker] = teSyncEEG_fieldtrip(tracker, data_ft, varargin)
     [codes_eeg, samps_eeg, lab_eeg, time_eeg, numEEG] =...
         extractEEGEvents(tracker, data_ft, ft_events, only_reg_events);
     
+    % must have at least two events
+    if numEEG < 2
+        sync.outcome = sprintf('Only %d EEG events, need at least 2.', numEEG);
+        return
+    end
+    
 % extract te event data
 
     [lg, lab_te, time_te, numTE] = extractTaskEngineEvents(tracker);
+    
+    % must have at least two events
+    if numTE < 2
+        sync.outcome = sprintf('Only %d Task Engine events, need at least 2.', numEEG);
+        return
+    end    
 
 % find sync markers in EEG. We start by looking for sync marker SYNC, which
 % may or may not be in either or both the EEG and TE data. If either a) <2
@@ -100,10 +112,17 @@ function [sync, tracker] = teSyncEEG_fieldtrip(tracker, data_ft, varargin)
         % if not successful, try to find other sync markers
         if ~suc_pair
             
-            [suc_search, ~, syncMarker] = searchForPossibleSyncMarker(lab_eeg, lab_te);
+            [suc_search, ~, syncMarker_search] = searchForPossibleSyncMarker(lab_eeg, lab_te);
+            
+            % did the search return the same sync marker we already tried?
+            suc_search = suc_search & ~isequal(syncMarker_search, syncMarker);
             
             % if we can't find any other markers, break out of the loop
             if ~suc_search, break, end
+            
+            % make the searched-for sync marker the current sync marker,
+            % for the next steps
+            syncMarker = syncMarker_search;
             
         end
         
@@ -313,7 +332,14 @@ function [suc, oc, syncMarker] = searchForPossibleSyncMarker(lab_eeg, lab_te)
     suc = false;
     oc = 'unknown error';
     
-    [u, i_eeg, i_te] = intersect(lab_eeg, lab_te);
+    % find common events
+    maskEeg = cellfun(@ischar, lab_eeg);
+    maskTe  = cellfun(@ischar, lab_te);
+    [u, iEegSub, iTeSub] = intersect(lab_eeg(maskEeg), lab_te(maskTe));
+    i_eeg = find(maskEeg);   i_eeg = i_eeg(iEegSub);
+    i_te  = find(maskTe);    i_te  = i_te(iTeSub);
+    
+%     [u, i_eeg, i_te] = intersect(lab_eeg, lab_te);
     if isempty(u)
         oc = 'no common eeg/task engine labels';
         return
@@ -322,6 +348,10 @@ function [suc, oc, syncMarker] = searchForPossibleSyncMarker(lab_eeg, lab_te)
     % remove actual SYNC markers
     idx_isSyncMarker = strcmpi(u, 'SYNC');
     u(idx_isSyncMarker) = [];
+    if isempty(u)
+        oc = 'no common eeg/task engine labels after removing SYNC markers';
+        return
+    end
     
     freq_eeg = cellfun(@(x) sum(strcmpi(lab_eeg, x)), u);
     freq_te = cellfun(@(x) sum(strcmpi(lab_te, x)), u);
@@ -492,7 +522,8 @@ function [tab, numMatched, meanErr, mdl, sync_r2, idx_log] =...
         end
 
         % check if any TE events are to be ignored
-        idx_ignore = ismember(event_te, eeg_lab_ignored);
+        idx_ignore = cellfun(@(x) ischar(x) && strcmp(x, eeg_lab_ignored), event_te);        
+%         idx_ignore = ismember(event_te, eeg_lab_ignored);
         if any(idx_ignore)
             event_te(idx_ignore) = [];
             eventTime_te(idx_ignore) = [];

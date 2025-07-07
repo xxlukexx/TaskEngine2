@@ -22,6 +22,15 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
 % and duration to define trials). 
 %
 % Video is currently not supported.
+%
+% Input args (todo - document missing args)
+% 
+%   - gathertrialguids (true/false): if true, when cutting the log, will
+%   identify the trial GUID(s) within the segmentation window, and gather
+%   any additional trials with matching trial GUID(s) that are *outside* of
+%   the window. This is for situations where, e.g., the trial log data is a
+%   fraction of a second outside the segmentation window. 
+%   ** WIP, not yet implemented **
 
     suc = false;
     oc = 'unknown error';
@@ -36,7 +45,10 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     addParameter(   parser, 'includetrialerrors',   false,      @islogical      )
     addParameter(   parser, 'musthave',             {},         @(x) ischar(x) || islogical(x))
     addParameter(   parser, 'cachedlog',            [],         @(x) isa(x, 'teLog'))
+    addParameter(   parser, 'gathertrialguids',     false,      @islogical      )
+    addParameter(   parser, 'trialguids',           [],         @(x) iscell(x) && ~isempty(x))
     
+
     parse(          parser, varargin{:});
     eegSync     =   parser.Results.eegsync;
     trl         =   parser.Results.trl;
@@ -45,6 +57,23 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     incTrialErr =   parser.Results.includetrialerrors;
     mustHave    =   parser.Results.musthave;
     cached_log  =   parser.Results.cachedlog;
+    gather_trial_guids = parser.Results.gathertrialguids;
+    trial_guids =   parser.Results.trialguids;
+    
+    if gather_trial_guids
+        
+        if isempty(trial_guids)
+            error('gathertrialguids was set to true, but trial GUIDs were not passed using the trialguids argument.')
+        end
+        
+        num_trial_guids = size(trial_guids, 1);
+        num_timestamps = size(timestamps, 1);
+        if num_trial_guids ~= num_timestamps
+            error('Number of trial guids passed (%d) did not match number of timetstamps (%d).',...
+                num_trial_guids, num_timestamps);
+        end
+        
+    end
     
     if isempty(timestamps)
         error('Timestamps cannot be empty.')
@@ -112,7 +141,13 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
         
         % cut log
         [trials{t}, suc_log(t), oc_log{t}] =...
-            cutLog(lg, timestamps(t, 1), timestamps(t, 2), incTrialErr, log_t);
+            cutLog(...
+            lg, timestamps(t, 1), timestamps(t, 2),...
+            incTrialErr,...
+            log_t,...
+            gather_trial_guids,...
+            trial_guids{t});
+        
         if ~suc_log(t)
             continue
         end
@@ -224,7 +259,7 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
     
 end
 
-function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr, log_t)
+function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr, log_t, gather_trial_guids, trial_guid)
 
     suc = false;
     oc = 'unknown error';
@@ -275,13 +310,31 @@ function [trial, suc, oc] = cutLog(lg, onset, offset, incTrialErr, log_t)
         
     % create new log with just segmented data
     try
-        la = lg.LogArray(s1:s2);
+        
+        % optionally, gather any additional trial guids
+        if gather_trial_guids
+            
+            idx_trial_guid = find(strcmpi(lg.LogTable.trialguid, trial_guid));
+            if s1 > min(idx_trial_guid)
+                s1 = min(idx_trial_guid);
+            end
+            if s2 < max(idx_trial_guid)
+                s2 = max(idx_trial_guid);
+            end
+            
+        end
+        
+        % get all log items within the segmentation window
+        la = lg.LogArray(s1:s2);     
         la = teSortLog(la);
         lg_seg = teLog(la);
+        
     catch ERR
+        
         suc = false;
         oc = sprintf('error instantiating teLog: %s', ERR.message);
         return
+        
     end
     
     % (optionally) detect and remove segments containing trial errors

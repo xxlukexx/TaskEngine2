@@ -1,4 +1,4 @@
-function [tab, idx] = teLogFilter(logArray, varargin)
+function [tab, idx, la] = teLogFilter(logArray, varargin)
 
     if isempty(logArray)
         tab = [];
@@ -54,6 +54,14 @@ function [tab, idx] = teLogFilter(logArray, varargin)
     
         [fnames, fnames_u, ~, ~, sig_i, sig_s, logArray] =...
             teLogGetVariableNames(logArray, varargin{:});   
+        
+        % if logArray is empty, it is because no vars were found in the
+        % log. 
+        if isempty(logArray)
+            fprintf(2, 'The requested variables:\n\n')
+            fprintf(2, '\t%s\n', vars{:})
+            error('Variables not found in the log.')
+        end
 
         % attempt to execute each function
         idx = true(size(logArray, 1), 1);
@@ -72,7 +80,19 @@ function [tab, idx] = teLogFilter(logArray, varargin)
         % therefore update the table's LogIdx variable via the index used
         % to filter the table
         tab = teLogExtract(logArray(idx));
-        tab.logIdx = find(idx);
+        
+        % make a temp log index vector, ensure it is a col vector
+        logIdx_tmp = find(idx);
+        if ~isvector(logIdx_tmp)
+            error('Log index returned a non-vector -- debug!')
+        end
+        
+        % if a row vector, transpose to col vector
+        if size(logIdx_tmp, 1) == 1 
+            logIdx_tmp = logIdx_tmp';
+        end
+        
+        tab.logIdx = logIdx_tmp;
         
     elseif istable(logArray)
         
@@ -121,5 +141,12 @@ function [tab, idx] = teLogFilter(logArray, varargin)
         end
     end
     tab(:, empty) = [];
+    
+    if nargout == 3
+        la = structArray2cellArrayOfStructs(table2struct(tab));
+        if isscalar(la) 
+            la = la{1};
+        end
+    end
     
 end

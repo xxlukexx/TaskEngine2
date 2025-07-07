@@ -1,22 +1,32 @@
 % This class expects to be passed one input argument, the path to a folder
 % containing EEG data. It will determine the type and instantiate a new
 % subclass for that type of EEG data, replacing itself. 
-classdef teExternalData_EEG_brainproducts < teExternalData
+classdef teExternalData_EEG_brainproducts < teExternalData_EEG
 
-    properties 
-        Ext2Te = @(x) x
-        Te2Ext = @(x) x
+%     properties 
+%         Ext2Te = @(x) x
+%         Te2Ext = @(x) x
+%     end
+    
+    properties (SetAccess = protected)
+%         NumChannels
+%         NumSamples
+%         SampleRate 
+%         Duration 
+%         Valid = false
+%         T1 = nan
+%         T2 = nan
+%         Fieldtrip = []
+%         Events = []
+        Header = []
+        File_vhdr
+        File_eeg
+        File_vmrk
+        EEGSystem = 'brain_products';
+%         NumEvents = nan
     end
     
-    properties (SetAccess = private)
-        NumChannels
-        NumSamples
-        SampleRate
-        Duration      
-        Valid = false
-    end
-    
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         Type = 'EEG'        
     end
     
@@ -64,10 +74,34 @@ classdef teExternalData_EEG_brainproducts < teExternalData
                 return
             end            
             
-            % attempt to load hdr file
-            obj.readHeader(file_hdr);
+            obj.File_vhdr = file_hdr;
+            obj.File_eeg = file_eeg;
+            obj.File_vmrk = file_mrk;
             
-
+            % attempt to load hdr file
+            obj.Header = obj.readHeader(file_hdr);
+            
+            % attempt to read data file
+            obj.Fieldtrip = obj.readData(file_eeg);
+            
+            % attempt to read events
+            obj.Events = obj.readEvents(file_mrk);
+            
+            obj.InstantiateSuccess = true;
+            obj.InstantiateOutcome = '';         
+            obj.Valid = true;
+            
+        end
+        
+        function [ft, events, t] = ToFieldtrip(obj)
+            
+            ft = obj.Fieldtrip;
+            if isfield(ft, 'events')
+                events = ft.events;
+            else
+                events = [];
+            end
+            t = [];
             
         end
        
@@ -75,7 +109,9 @@ classdef teExternalData_EEG_brainproducts < teExternalData
     
     methods (Access = private)
       
-        function readHeader(obj, file_hdr)
+        function hdr = readHeader(obj, file_hdr)
+            
+            hdr = [];
 
             % read each line of the header text file to an element of the
             % cell array
@@ -105,6 +141,40 @@ classdef teExternalData_EEG_brainproducts < teExternalData
             
         end
         
+        function ft = readData(obj, file_eeg)
+            
+            ft = [];
+            
+            % read the actual EEG data in the .eeg file, return duration
+            % and number of samples
+            cfg = [];
+            cfg.dataset = file_eeg;
+            ft = ft_preprocessing(cfg);
+            
+            % extract data
+            obj.NumSamples = size(ft.trial{1}, 2);
+            obj.Duration = ft.time{1}(end) - ft.time{1}(1);
+            
+            % extract first (T1) and last (T2) timestamps. In most cases
+            % (e.g. brain vision), there is not absolute time, so this will
+            % be [1, duration_in_secs]. In some cases (e.g. enobio loaded
+            % using Luke's eegEnobio2Fieldtrip function) there will be an
+            % abstime field holding (usually) posix timestamps. detect and
+            % load these if possible. 
+            if isfield(ft, 'abstime')
+                error('todo -- extract absolute time')
+            else
+                obj.T1 = ft.time{1}(1);
+                obj.T2 = ft.time{1}(end);
+            end
+            
+        end
+        
+        function events = readEvents(~, file_mrk)
+            
+            events = ft_read_event(file_mrk);
+            
+        end
         
     end
     

@@ -215,7 +215,11 @@ classdef teLog < handle
                 obj.prTrialGUIDTable.trialguid = tguid_u;
                 obj.prTrialGUIDTable.timestamp = tab.timestamp;
                 obj.prTrialGUIDTable.task = tab.source;
-                obj.prTrialGUIDTable.trialno = cell2mat(tab.trialno);
+                if iscell(tab.trialno)
+                    obj.prTrialGUIDTable.trialno = cell2mat(tab.trialno);
+                else
+                    obj.prTrialGUIDTable.trialno = tab.trialno;
+                end
                 
             end
             
