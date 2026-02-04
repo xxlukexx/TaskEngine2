@@ -7,7 +7,6 @@ function teFilterListByTask(list, taskName)
     if ~iscell(taskName), taskName = {taskName}; end
     idx = cellfun(@(x) ismember(x, taskName), list.Table.Task);
     
-%     idx = strcmpi(list.Table.Task, taskName);
     if ~any(idx)
         error('No matching tasks found in list.')
     end

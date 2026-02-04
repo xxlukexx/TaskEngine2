@@ -12,7 +12,7 @@ function [is, reason, file_tracker, tracker] =...
     % folder name. These are split sessions that have been combined with
     % teJoin, and should not be considered valid data. This can be
     % overriden with the '-includePreCombine' switch
-    includePrecombine = ismember('-includePrecombine', varargin);
+    includePrecombine = ismember_loose('-includePrecombine', varargin);
 
     % if path_session is a cellstr containing multiple files, recursively
     % call this function with each element 

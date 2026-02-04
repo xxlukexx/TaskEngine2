@@ -37,7 +37,7 @@ function [suc, oc, tab_smry, tab_res, tab_sched, tab_pres] =...
             idx_pres = idx_pres + 1;
         end
         
-        if idx_pres > length(res_calc) || idx_sched > size(tab_pres, 1)
+        if idx_pres > length(res_calc) || idx_sched > size(tab_pres, 1) || idx_pres > size(tab_pres, 1)
             stop = true;
         end
         

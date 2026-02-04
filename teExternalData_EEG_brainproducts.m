@@ -78,6 +78,10 @@ classdef teExternalData_EEG_brainproducts < teExternalData_EEG
             obj.File_eeg = file_eeg;
             obj.File_vmrk = file_mrk;
             
+            obj.Paths('file_vhdr') = file_hdr;
+            obj.Paths('file_eeg') = file_eeg;
+            obj.Paths('file_vmrk') = file_mrk;
+            
             % attempt to load hdr file
             obj.Header = obj.readHeader(file_hdr);
             
@@ -86,6 +90,7 @@ classdef teExternalData_EEG_brainproducts < teExternalData_EEG
             
             % attempt to read events
             obj.Events = obj.readEvents(file_mrk);
+            obj.Fieldtrip.events = obj.Events;
             
             obj.InstantiateSuccess = true;
             obj.InstantiateOutcome = '';         

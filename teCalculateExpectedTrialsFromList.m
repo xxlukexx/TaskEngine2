@@ -39,8 +39,16 @@ function [suc, oc] = checkListValidity(list)
         oc = 'passed list contained an empty Table property';
         return
     end
+    
+    % 'Enabled' may optionally be a list variable name. If it's missing,
+    % create it and set al rows to true
+    if ~ismember('Enabled', tab.Properties.VariableNames)
+        tab.Enabled = true(size(tab, 1), 1);
+        list.CustomSetTable(tab);
+    end
 
     % required variables
+%     if ~all(ismember({'Type', 'Target', 'Task', 'NumSamples'}, tab.Properties.VariableNames))    
     if ~all(ismember({'Enabled', 'Type', 'Target', 'Task', 'NumSamples'}, tab.Properties.VariableNames))
         oc = 'passed list must contain the following variables: Enabled, Type, Target, Task, NumSamples';
         return
@@ -93,11 +101,11 @@ function [suc, oc, res] = recParseList(listCol, curListName, startSample, numSam
         % look for root list in collection
         list = listCol(curListName);
     
-        [suc_list, oc_list] = checkListValidity(list);
-        if ~suc_list
-            oc = oc_list;
-            return
-        end
+%         [suc_list, oc_list] = checkListValidity(list);
+%         if ~suc_list
+%             oc = oc_list;
+%             return
+%         end
         
         [suc_listVal, oc_listVal] = checkListValidity(list);
         if ~suc_listVal

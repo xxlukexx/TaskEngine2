@@ -22,6 +22,7 @@ classdef teExternalData_EEG < teExternalData
     
     properties (Dependent, SetAccess = private)
         NumEvents
+        AllEventsAre255
     end
     
 %     properties (Abstract, SetAccess = protected)
@@ -36,6 +37,19 @@ classdef teExternalData_EEG < teExternalData
             else
                 val = length(obj.Events);
             end
+        end
+        
+        function val = get.AllEventsAre255(obj)
+            val = false;
+            if obj.NumEvents == 0 || isempty(obj.Events)
+                return
+            end
+            if ~isstruct(obj.Events)
+                error('Unrecognised events format.')
+            elseif ~isfield(obj.Events, 'value')
+                error('Missing ''value'' field in events struct.')
+            end
+            val = all([obj.Events.value] == 255);
         end
         
 %         function obj = teExternalData_EEG(path_in)    

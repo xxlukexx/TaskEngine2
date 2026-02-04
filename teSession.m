@@ -20,7 +20,9 @@ classdef teSession < teData
         % tracker and -- optionally -- external data and metadata
         
             % call superclass constructor to init the general teData stuff
-            obj = obj@teData;
+            obj = obj@teData; 
+            
+%             fieldtrip_is_primary = true;
         
         % handle input args
         
@@ -28,34 +30,58 @@ classdef teSession < teData
             % session path (no key/value pairs). todo this is a bit
             % tortuous and should probably be removed once all calling
             % functions are udpated to use the key/value format. 
-            if nargin == 1 && ischar(varargin{1}) ||...
-                    (nargin == 2 && ischar(varargin{1}) &&...
-                    isequal(varargin{2}, 'includePrecombine'))
-                
-                path_session = varargin{1};
-                includePrecombine = nargin == 2 &&...
-                    isequal(varargin{2}, 'includePrecombine');
-                
-            else
-        
-                parser = inputParser;
-                parser.addParameter('path_session', []);
-                parser.addParameter('tracker', []);
-                parser.addParameter('external_data', []);
-                parser.addParameter('metadata', []);
-                parser.addOptional('includePrecombine', false);
-                parser.parse(varargin{:});
+            
+            % --- pre-parse legacy positional args ---
+            args = varargin;
 
-                path_session = parser.Results.path_session;
-                tracker = parser.Results.tracker;
-                ext = parser.Results.external_data;
-                md = parser.Results.metadata;
-                includePrecombine = parser.Results.includePrecombine;
-                
+            path_session = [];
+            includePrecombine = false;
+
+            % If first arg looks like a path (char or string), treat it as legacy path_session
+            if ~isempty(args) && (ischar(args{1}) || (isstring(args{1}) && isscalar(args{1})))
+                path_session = args{1};
+                args(1) = [];
+
+                % Legacy special-case: second arg can be the bare flag 'includePrecombine'
+                if ~isempty(args) && (ischar(args{1}) || (isstring(args{1}) && isscalar(args{1}))) && ...
+                        strcmpi(char(args{1}), 'includePrecombine')
+                    includePrecombine = true;
+                    args(1) = [];
+                end
             end
+
+            % --- now parse remaining args as name/value pairs ---
+            parser = inputParser;
+            parser.CaseSensitive = false;
+            parser.PartialMatching = false;   % avoids ambiguous partial name matches
+            parser.FunctionName = 'teSession';
+
+            parser.addParameter('path_session', path_session, ...
+                @(x) isempty(x) || ischar(x) || (isstring(x) && isscalar(x)));
+
+            parser.addParameter('tracker', [], @(x) true);
+            parser.addParameter('external_data', [], @(x) true);
+            parser.addParameter('metadata', [], @(x) true);
+
+            % These should be PARAMETERS (name/value), not OPTIONAL positionals
+            parser.addParameter('includePrecombine', includePrecombine, ...
+                @(x) (islogical(x) && isscalar(x)) || (isnumeric(x) && isscalar(x)));
+
+            parser.addParameter('fieldtrip_is_primary', true, ...
+                @(x) (islogical(x) && isscalar(x)) || (isnumeric(x) && isscalar(x)));
+
+            parser.parse(args{:});
+
+            % --- assign results ---
+            path_session        = parser.Results.path_session;
+            tracker             = parser.Results.tracker;
+            ext                 = parser.Results.external_data;
+            md                  = parser.Results.metadata;
+            includePrecombine   = logical(parser.Results.includePrecombine);
+            fieldtrip_is_primary= logical(parser.Results.fieldtrip_is_primary);
             
             if ~isempty(path_session)
-                tracker = obj.ReadFromSessionPath(path_session, includePrecombine);
+                tracker = obj.ReadFromSessionPath(path_session, includePrecombine, fieldtrip_is_primary);
             elseif ~isempty(tracker)
                 obj.ReadFromTracker(tracker)
                 if ~isempty(ext)
@@ -71,7 +97,7 @@ classdef teSession < teData
         
         end
         
-        function tracker = ReadFromSessionPath(obj, path_session, includePrecombine)     
+        function tracker = ReadFromSessionPath(obj, path_session, includePrecombine, fieldtrip_is_primary)     
             
         % check input args and session data to ensure it can be loaded
             
@@ -113,7 +139,7 @@ classdef teSession < teData
     
         % discover external data
         
-            ext = obj.DiscoverExternalData;
+            ext = obj.DiscoverExternalData('fieldtrip_is_primary', fieldtrip_is_primary);
             
         % attempt to read metadata from disk
         

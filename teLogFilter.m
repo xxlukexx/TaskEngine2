@@ -1,5 +1,9 @@
 function [tab, idx, la] = teLogFilter(logArray, varargin)
 
+    tab = [];
+    idx = [];
+    la = [];
+    
     if isempty(logArray)
         tab = [];
         idx = [];

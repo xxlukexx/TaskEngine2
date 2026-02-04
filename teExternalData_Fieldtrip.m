@@ -16,7 +16,7 @@ classdef teExternalData_Fieldtrip < teExternalData_EEG
     end
     
     properties (SetAccess = protected)
-        Type = 'fieldtrip'        
+        Type = 'EEG'        
     end
     
     methods

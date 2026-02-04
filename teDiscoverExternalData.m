@@ -4,9 +4,14 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
 % ext is a struct containing fieldnames pertaining to each type of external
 % data, and values in the form of an instance of a teExternalData subclass
 
+    parser = inputParser;
+    parser.KeepUnmatched = true;
+    parser.addParameter('fieldtrip_is_primary', true, @islogical);
+    parser.parse(varargin{:});
+    fieldtrip_is_primary = parser.Results.fieldtrip_is_primary;
+
 % default empty struct as output arg
 
-%     ext = struct;
     ext = teCollection('teExternalData');
     
 % check input args
@@ -35,6 +40,17 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
     idx_crap = ismember({d.name}, {'.', '..'});
     d(idx_crap) = [];
     
+    % (optionally) ignore EEG folder if fieldtrip folder is present
+    folder_names = lower({d.name});
+    idx_eeg_folder = find(strcmp('eeg', folder_names) | strcmp('enobio', folder_names));
+    idx_ft_folder = find(strcmp('fieldtrip', folder_names));
+    has_eeg_folder = any(idx_eeg_folder);
+    has_ft_folder = any(idx_ft_folder);
+    if has_eeg_folder && has_ft_folder && fieldtrip_is_primary
+        d(idx_eeg_folder) = [];
+        warning('Ignoring found ''eeg'' folder due to fieldtrip_is_primary option is set to true.')
+    end
+
     % get number of folders, and give up if no folders found
     numFolders = length(d);
     if numFolders == 0
@@ -43,12 +59,12 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
     
     % compare subfolder names to lookup table
     lookup = {...
-    %   folder name         % prop name         % class/fcn
-        'eyetracking',      'EyeTracking',      'teExternalData_EyeTracking'        ;...
-        'enobio',           'Enobio',           'teExternalData_Enobio'             ;...
-        'eeg',              'EEG',              'teDiscoverExternalData_EEG'        ;...
-        'screenrecording',  'ScreenRecording',  'teExternalData_ScreenRecording'    ;...
-        'fieldtrip',        'Fieldtrip',        'teExternalData_Fieldtrip'          ;...
+    %   folder name         % prop name         % class/fcn                         %  label
+        'eyetracking',      'EyeTracking',      'teExternalData_EyeTracking',       []          ;...
+        'enobio',           'Enobio',           'teExternalData_Enobio',            []          ;...
+        'eeg',              'EEG',              'teDiscoverExternalData_EEG',       []          ;...
+        'screenrecording',  'ScreenRecording',  'teExternalData_ScreenRecording',   []          ;...
+        'fieldtrip',        'Fieldtrip',        'teDiscoverExternalData_EEG',       'eeg'       ;...
         };
     
     for f = 1:numFolders
@@ -62,6 +78,8 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
         if found
             
             type = lookup{found, 1};
+            label = lookup{found, 4};
+            if isempty(label), label = type; end
             className = lookup{found, 3};
                 
             % build an absolute path to the external data folder
@@ -85,16 +103,16 @@ function [ext, md] = teDiscoverExternalData(path_session, md, varargin)
                     oc = sprintf('required files missing [type:%s, className: %s]',... 
                     type, className);
                 else
-                    ext(type) = ext_tmp;
-                    suc = ext(type).InstantiateSuccess;
-                    oc = ext(type).InstantiateOutcome;
+                    ext(label) = ext_tmp;
+                    suc = ext(label).InstantiateSuccess;
+                    oc = ext(label).InstantiateOutcome;
                 end
                 
                 % if teExternalData subclass did not instantiate correctly,
                 % report this in the metadata
                 if nargout == 2
-                    field_suc = sprintf('%s_load_success', type);
-                    field_oc = sprintf('%s_load_outcome', type);
+                    field_suc = sprintf('%s_load_success', label);
+                    field_oc = sprintf('%s_load_outcome', label);
                     md.(field_suc) = suc;
                     md.(field_oc) = oc;
                 end

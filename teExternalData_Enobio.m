@@ -20,7 +20,7 @@ classdef teExternalData_Enobio < teExternalData_EEG
     end
     
     properties (SetAccess = protected)
-        Type = 'enobio'        
+        Type = 'EEG'        
     end
     
     methods

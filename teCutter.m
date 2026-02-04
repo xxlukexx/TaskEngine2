@@ -72,6 +72,11 @@ function [suc, oc, res] = teCutter(data, timestamps, varargin)
             error('Number of trial guids passed (%d) did not match number of timetstamps (%d).',...
                 num_trial_guids, num_timestamps);
         end
+
+    else
+
+        % dummy empty trial guids for consistency
+        trial_guids = cell(size(timestamps, 1), 1);
         
     end
     
