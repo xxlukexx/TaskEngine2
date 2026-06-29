@@ -80,6 +80,12 @@ classdef teSession < teData
             includePrecombine   = logical(parser.Results.includePrecombine);
             fieldtrip_is_primary= logical(parser.Results.fieldtrip_is_primary);
             
+            % convert string input to char array for compatibility with
+            % teCollections that expect text in char arrays
+            if isstring(path_session)
+                path_session = char(path_session);
+            end
+            
             if ~isempty(path_session)
                 tracker = obj.ReadFromSessionPath(path_session, includePrecombine, fieldtrip_is_primary);
             elseif ~isempty(tracker)
@@ -120,6 +126,12 @@ classdef teSession < teData
             if ~passed
                 error('Path [%s] does not refer to a valid Task Engine 2 session. Reason was:\n\n%s',...
                     path_session, reason)
+            end
+            
+            % convert string input to char array for compatibility with
+            % teCollections that expect text in char arrays
+            if isstring(path_session)
+                path_session = char(path_session);
             end
             
         % store main fields from the teTracker into teData properties
