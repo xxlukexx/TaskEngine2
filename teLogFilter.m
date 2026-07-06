@@ -62,9 +62,9 @@ function [tab, idx, la] = teLogFilter(logArray, varargin)
         % if logArray is empty, it is because no vars were found in the
         % log. 
         if isempty(logArray)
-            fprintf(2, 'The requested variables:\n\n')
-            fprintf(2, '\t%s\n', vars{:})
-            error('Variables not found in the log.')
+            tab = [];
+            idx = [];
+            return
         end
 
         % Normalise to a column so cellfun results and logical indexing
