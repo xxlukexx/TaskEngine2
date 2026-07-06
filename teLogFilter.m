@@ -67,14 +67,19 @@ function [tab, idx, la] = teLogFilter(logArray, varargin)
             error('Variables not found in the log.')
         end
 
+        % Normalise to a column so cellfun results and logical indexing
+        % keep the same shape even when callers pass row-shaped logs.
+        logArray = logArray(:);
+
         % attempt to execute each function
-        idx = true(size(logArray, 1), 1);
+        idx = true(numel(logArray), 1);
         for v = 1:length(vars)
             % 20230726 - added any() to fcns below to catch log fields that
             % are cell arrays. These return a vector of true/false,
             % corresponding to whether fcn was true for each element. This
             % isn't the purpose of this function so I changed it to any. 
-            idx = idx & cellfun(@(x) any(fcns{v}(x.(vars{v}))), logArray);
+            res = cellfun(@(x) any(fcns{v}(x.(vars{v}))), logArray);
+            idx = idx & res(:);
         end
         
         % first filter the log array using the idx from the previous step.
@@ -83,6 +88,11 @@ function [tab, idx, la] = teLogFilter(logArray, varargin)
         % variable, which references the original index of the log item. We
         % therefore update the table's LogIdx variable via the index used
         % to filter the table
+        if ~any(idx)
+            tab = [];
+            return
+        end
+        
         tab = teLogExtract(logArray(idx));
         
         % make a temp log index vector, ensure it is a col vector
