@@ -21,7 +21,20 @@ classdef teTrial < teDynamicProps
     
     methods
         
-        function obj = teTrial(lg, onset, offset)
+        function obj = teTrial(lg, onset, offset, skipLogMetadata)
+        %TETRIAL Construct a trial from a log and optional time bounds.
+        %
+        % Set skipLogMetadata true when the caller already owns the task,
+        % GUID, and date metadata. This avoids materialising lg.LogTable for
+        % high-volume cutting; the caller must populate those fields itself.
+
+            if nargin >= 4 && logical(skipLogMetadata)
+                obj.Date = [];
+                obj.Onset = onset;
+                obj.Offset = offset;
+                obj.Log = lg;
+                return
+            end
             
             tab = lg.LogTable;
 

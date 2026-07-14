@@ -15,7 +15,7 @@ end
 
 function localValidateValue(value, path)
     if isstruct(value)
-        if ~(isscalar(value) || isvector(value))
+        if ~(isscalar(value) || isvector(value) || isempty(value))
             error('Registry value at %s is a non-vector struct array. Store it by file reference.', path)
         end
         for i = 1:numel(value)
